@@ -1,0 +1,37 @@
+on:
+  push:
+    tags:
+      - 'v*'
+
+name: Create Release
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, aarch64]
+    runs-on: ${{ fromJson('{"x86_64":"ubuntu-latest", "aarch64":["self-hosted", "Linux", "ARM64"]}')[matrix.arch] }}
+
+    permissions: write-all
+
+    container:
+      image: fedora:36
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      # Build the stress-ng
+      - name: Build stress-ng
+        run: |
+          dnf install -y libaio-devel libattr-devel libbsd-devel libcap-devel libgcrypt-devel libjpeg-devel Judy-devel keyutils-libs-devel lksctp-tools-devel libatomic-static libgbm-devel libglvnd-core-devel libglvnd-devel libX11-devel libXau-devel libxcb-devel xorg-x11-proto-devel zlib-devel glibc-static xxhash-devel make gcc
+          STATIC=1 make
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./stress-ng
+          asset_name: stress-ng-${{ matrix.arch }}
+          tag: ${{ github.ref }}
